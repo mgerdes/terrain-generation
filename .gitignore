@@ -1,0 +1,4 @@
+*.swp
+terrain
+build
+terrain_mesh.bin
