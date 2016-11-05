@@ -14,14 +14,20 @@ GLFWwindow *util_init_gl_window(char *title, int width, int height) {
     window = glfwCreateWindow(width, height, title, NULL, NULL);
 
     glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glewExperimental = GL_TRUE;
     glewInit();
     glEnable(GL_DEPTH_TEST); 
     glDepthFunc(GL_LESS);
     glClearColor(53.0 / 255.0, 205.0 / 255.0, 255.0 / 255.0, 1.0);
 
+    glEnable(GL_STENCIL_TEST);    
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);  
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    //glEnable(GL_CULL_FACE);
 
     return window;
 }

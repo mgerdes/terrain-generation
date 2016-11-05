@@ -62,7 +62,7 @@ void terrain_init_data() {
 }
 
 void terrain_update_geometry() {
-    int i, j, num_triangles;
+    int i, j, k, num_triangles;
     FILE *terrain_mesh_file = fopen("terrain_mesh.bin", "r");
 
     if (!terrain_mesh_file) {
@@ -86,7 +86,7 @@ void terrain_update_geometry() {
     for (i = 0; i < num_triangles; i++) {
         vec3 p[3], c[3], t[2], n;
 
-        for (j = 0; j < 3; j++) {
+        for (j = 2; j >= 0; j--) {
             fscanf(terrain_mesh_file, "%f %f %f", &p[j].x, &p[j].y, &p[j].z);
             points[9 * i + 3 * j + 0] = p[j].x;
             points[9 * i + 3 * j + 1] = p[j].y;
@@ -125,6 +125,35 @@ void terrain_update_geometry() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * num_points, colors, GL_STATIC_DRAW);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(2);
+
+    static float kinda_random[11] = { -0.9, 0.9, -0.4, 0.2, 0.6, -0.3, -0.8, -0.2, 0.5, 0.1, -0.6 };
+    k = 0;
+    for (i = 0; i < 10; i++) {
+        for (j = 0; j < 10; j++) {
+            float rx = 20 * kinda_random[k++ % 11];
+            float rz = 20 * kinda_random[k++ % 11];
+
+            float x = 40 + i * (600 / 10.0) + rx;
+            float z = 40 + j * (600 / 10.0) + rz;
+            float y = height_field[(int) (600 * x) + (int) z];
+
+            if (y >= 2 && y <= 10) {
+                trees[i * 10 + j].is_visible = true;
+            }
+            else {
+                trees[i * 10 + j].is_visible = false;
+            }
+
+            trees[i * 10 + j].is_selected = false;
+            if (i == 0 && j == 0) {
+                trees[i * 10 + j].is_selected = true;
+            }
+
+            trees[i * 10 + j].position = (vec3) {x, y + 2.0, z};
+            trees[i * 10 + j].scale = (vec3) {2.0, 2.0, 2.0};
+            trees[i * 10 + j].rotation = (vec3) {0.0, x * z, 0.0};
+        }
+    }
 }
 
 void terrain_draw() {
@@ -132,31 +161,48 @@ void terrain_draw() {
     mat4 scale_mat = mat4_scale(&(vec3) {1.0, 0.6, 1.0});
     mat4 translation_mat = mat4_translation(&(vec3) {0.0, 0.0, 0.0});
     mat4 model_mat = mat4_multiply(&translation_mat, &scale_mat);
-    
+
+    glStencilMask(0xFF);
+    glClear(GL_STENCIL_BUFFER_BIT); 
+
+    /*
+     * Draw the terrain normally, setting stencil buffer to 1's so we can draw 
+     * just the border later.
+     */
     glUseProgram(terrain_shader.program);
+    glStencilMask(0xFF);
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+
     glUniformMatrix4fv(model_shader.model_mat_location, 1, GL_TRUE, model_mat.m);
     glBindVertexArray(terrain_geometry.vao);
     glDrawArrays(GL_TRIANGLES, 0, num_points);
 
-    static float kinda_random[17] = { -0.1, 0.4, -0.2, 0.3, -0.4, 0.8, -0.9, 0.9, -0.4, 0.2, 0.6, -0.3, -0.8, -0.2, 0.5, 0.1, -0.6 };
+    /*
+     * Draw with wireframe, only where the stencil buffer is 0, so
+     * not to draw over the normal terrain
+     */
+    glUseProgram(single_color_shader.program);
+    glStencilMask(0x00);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(4);
+
+    glUniformMatrix4fv(single_color_shader.model_mat_location, 1, GL_TRUE, model_mat.m);
+    glBindVertexArray(terrain_geometry.vao);
+    //glDrawArrays(GL_TRIANGLES, 0, num_points);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    glStencilMask(0xFF);
+    glClear(GL_STENCIL_BUFFER_BIT); 
+
+    /*
+     * Draw each of the trees.
+     */
     glUseProgram(model_shader.program);
-    struct tree tree;
-    for (i = 40; i < 600; i += 40) {
-        for (j = 40; j < 600; j += 40) {
-            float ri = 20 * kinda_random[k++ % 17];
-            float rj = 20 * kinda_random[k++ % 17];
-
-            float x = i + ri;
-            float z = j + rj;
-            float y = height_field[(int) (600 * x) + (int) z];
-
-            if (y < 5 || y > 10) {
-                continue;
-            }
-
-            tree.position = (vec3) {x, y - 3.0, z};
-            tree.rotation = (vec3) {0.0, x * z, 0.0};
-            tree_draw(&tree);
+    for (i = 0; i < 10; i++) {
+        for (j = 0; j < 10; j++) {
+            tree_draw(&trees[i * 10 + j]);
         }
     }
 }

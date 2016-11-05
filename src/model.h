@@ -10,6 +10,11 @@
 #include "maths.h"
 #include "util.h"
 
+struct single_color_shader {
+    GLuint program;
+    GLuint proj_mat_location, view_mat_location, model_mat_location;
+} single_color_shader;
+
 struct model_shader {
     GLuint program;
     GLuint proj_mat_location, view_mat_location, model_mat_location;

@@ -4,7 +4,7 @@ HEADERS = $(wildcard src/*.h) src/maths/maths.h
 SOURCES = $(wildcard src/*.c) src/maths/maths.c
 OBJS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 DEPS = $(OBJS:%.o=%.d)
-CFLAGS = -Iobjects -Isrc -Isrc/maths -lGL -lGLEW -lglfw -lm -lassimp 
+CFLAGS = -Iobjects -Isrc -Isrc/maths -lGL -lGLEW -lglfw -lm -lassimp -O2
 
 all: $(BUILD_DIR) $(BIN)
 

@@ -7,7 +7,7 @@ from PIL import Image
 
 def make_noise_for_biomes():
     num_biomes = 4 
-    n = make_noise(2)
+    n = make_noise(1)
 
     for i in range(600):
         for j in range(600):
@@ -69,7 +69,7 @@ def noise_combine_with_biome(noise, biome_noise):
     for i in range(600):
         for j in range(600):
             if (biome_noise[i][j] == 0.0):
-                new_noise[i][j] = 0.0;
+                new_noise[i][j] = normalize_number(noise[i][j], 0.00, 0.05)
             elif (biome_noise[i][j] == 0.1):
                 new_noise[i][j] = normalize_number(noise[i][j], 0.05, 0.10)
             elif (biome_noise[i][j] == 0.3):
@@ -126,6 +126,9 @@ def get_color_for_triangle(tri):
     normal = normal / numpy.linalg.norm(normal)
     slope = max(numpy.dot(normal, [0, 1, 0]), 0.0)
 
+    if (slope < 0.5):
+        return (0.3, 0.3, 0.3)
+
     if (elev < 0.05):
         return (0, 0.41, 0.58)
     elif (elev < 0.10):
@@ -133,10 +136,7 @@ def get_color_for_triangle(tri):
     elif (elev < 0.30):
         return (0.2, 0.2, 0.2)
     else:
-        if (slope > 0.4):
-            return (1.0, 1.0, 1.0)
-        else:
-            return (0.2, 0.2, 0.2)
+        return (1.0, 1.0, 1.0)
 
 def create_mesh_from_points(pts, noise):
     f = open('terrain_mesh.bin', 'w')
@@ -160,7 +160,11 @@ def create_mesh_from_points(pts, noise):
             f.write(str(color[0]) + ' ' + str(color[1]) + ' ' + str(color[2]) + '\n')
 
 noise = make_noise()
+#output_noise_image(noise, 'noise.png')
 biome_noise = make_noise_for_biomes()
+#output_noise_image(biome_noise, 'biome_noise.png')
 terrain_noise = noise_combine_with_biome(noise, biome_noise)
+#output_noise_image(terrain_noise, 'terrain_noise.png')
 pts = noise_sample_points(terrain_noise)
+#output_sampled_points_image(pts, 'terrain_pts.png')
 create_mesh_from_points(pts, terrain_noise)

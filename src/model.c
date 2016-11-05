@@ -1,5 +1,22 @@
 #include "model.h"
 
+static const char *single_color_vertex_shader_string = 
+    "#version 330\n"
+    "in vec3 vertex_position;"
+    "uniform mat4 model_mat;"
+    "uniform mat4 view_mat;"
+    "uniform mat4 proj_mat;"
+    "void main () {"
+    "   gl_Position = proj_mat * view_mat * model_mat * vec4(vertex_position, 1.0);"
+    "}";
+
+static const char *single_color_fragment_shader_string = 
+    "#version 330\n"
+    "out vec4 frag_color;"
+    "void main () {"
+    "   frag_color = vec4(0.0, 0.0, 0.0, 1.0);"
+    "}";
+
 static const char *model_vertex_shader_string = 
     "#version 330\n"
     "in vec3 vertex_position;"
@@ -42,6 +59,18 @@ void model_init_data() {
     util_check_for_shader_location_errors(model_shader.view_mat_location, "view_mat");
     util_check_for_shader_location_errors(model_shader.model_mat_location, "model_mat");
     util_check_for_shader_location_errors(model_shader.diffuse_color_location, "diffuse_color");
+
+
+    // Create the shader
+    single_color_shader.program = util_create_shader_program(single_color_fragment_shader_string, single_color_vertex_shader_string);
+
+    // Create each of the uniform locations
+    single_color_shader.proj_mat_location = glGetUniformLocation(single_color_shader.program, "proj_mat");
+    single_color_shader.view_mat_location = glGetUniformLocation(single_color_shader.program, "view_mat");
+
+    // Check for errors with uniform locations
+    util_check_for_shader_location_errors(single_color_shader.proj_mat_location, "proj_mat");
+    util_check_for_shader_location_errors(single_color_shader.view_mat_location, "view_mat");
 }
 
 struct model model_create(const char *filename) {

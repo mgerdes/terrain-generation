@@ -437,3 +437,26 @@ mat4 mat4_orthographic_projection(float left, float right, float bottom, float t
         0, 0, 0, 1
     };
 }
+
+float ray_dist_to_sphere(ray *r, sphere *s) {
+    vec3 o_min_c;
+    float a, b, c, t1, t2, det;
+
+    o_min_c = vec3_sub(&r->origin, &s->center);
+
+    a = vec3_dot(&r->direction, &r->direction);
+    b = 2 * vec3_dot(&r->direction, &o_min_c); 
+    c = vec3_dot(&o_min_c, &o_min_c) - s->radius * s->radius;
+
+    det = sqrt(b * b - 4 * a * c);
+
+    if (det < 0) {
+        return -1.0;
+    }
+    else {
+        t1 = (-b + sqrt(b * b - 4 * a * c)) / 2 * a;
+        t2 = (-b - sqrt(b * b - 4 * a * c)) / 2 * a;
+
+        return MIN(t1, t2);
+    }
+}

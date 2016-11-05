@@ -36,20 +36,21 @@ typedef struct vec4 {
 } vec4;
 
 /*
- * Bounding Boxes
- */
-typedef struct bounding_box {
-    vec3 v1, v2;
-} bounding_box;
-
-
-/*
  * 4 x 4 matrices
  * Stored in row-order form
  */
 typedef struct mat4 {
     float m[16];
 } mat4;
+
+typedef struct ray {
+    vec3 origin, direction; 
+} ray;
+
+typedef struct sphere {
+    vec3 center;
+    float radius;
+} sphere;
 
 float vec3_dot(vec3 *v1, vec3 *v2);
 vec3 vec3_sub(vec3 *v1, vec3 *v2);
@@ -84,7 +85,9 @@ mat4 mat4_transpose(mat4 *m);
 mat4 mat4_normal_transform(mat4 *model_transform);
 mat4 mat4_look_at(vec3 *position, vec3 *target, vec3 *up);
 mat4 mat4_perspective_projection(float fov, float aspect, float near, float far);
-mat4 mat4_orthographic_projection(float right, float left, float top, float bottom, float far, float near);
+mat4 mat4_orthographic_projection(float right, float left, float top, float bottom, float near, float far);
 void mat4_print(mat4 *m);
+
+float ray_dist_to_sphere(ray *r, sphere *s); 
 
 #endif

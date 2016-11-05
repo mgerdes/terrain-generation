@@ -20,6 +20,8 @@ struct terrain_geometry {
     GLuint vao, points_vbo, normals_vbo, colors_vbo;
 } terrain_geometry;
 
+struct tree trees[100];
+
 void terrain_init_data(void);
 void terrain_update_geometry(void);
 void terrain_draw(void);

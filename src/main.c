@@ -14,15 +14,18 @@
 #include "terrain.h"
 #include "flying_thing.h"
 #include "controls.h"
+#include "cursor.h"
+#include "state.h"
 
 int main() {
-    int width, height;
+    struct state state;
     GLFWwindow *window = util_init_gl_window("opengl", 1000, 1000);
 
     {
         model_init_data();
         tree_init_data();
         terrain_init_data();
+        cursor_init_data();
     }
 
     struct camera camera;
@@ -32,6 +35,7 @@ int main() {
     camera_update_view_mat(&camera);
 
     mat4 proj_mat = mat4_perspective_projection(60, 1.0, 1.0, 1000);
+    mat4 ui_proj_mat = mat4_orthographic_projection(0.0, 1000.0, 1000.0, 0.0, 0.0, 1.0);
 
     struct flying_thing flying_thing;
     flying_thing.pos = (vec3) {0, 0, 0};
@@ -51,17 +55,24 @@ int main() {
     float time_since_fps_update = 0.0;
 
     while (!glfwWindowShouldClose(window)) {
+        int i;
         float current_time = glfwGetTime();
         float elapsed_time = current_time - previous_time;
         previous_time = current_time;
 
-        glfwGetWindowSize(window, &width, &height);
-        glViewport(0, 0, width, height);
-        proj_mat = mat4_perspective_projection(60, width / (float) height, 1.0, 1000);
+        glfwGetWindowSize(window, &state.window_width, &state.window_height);
+        glViewport(0, 0, state.window_width, state.window_height);
+        proj_mat = mat4_perspective_projection(60, state.window_width / (float) state.window_height, 1.0, 1000);
+        ui_proj_mat = mat4_orthographic_projection(0.0, state.window_width, state.window_height, 0.0, 0.0, 1.0);
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glStencilMask(0xFF);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); 
+        glStencilMask(0x00);
 
         controls_update(window);
+
+        flying_thing_increase_azimuth(&flying_thing, 0.001 * controls.mouse_delta_x);
+        flying_thing_increase_inclination(&flying_thing, -0.001 * controls.mouse_delta_y);
 
         if (controls.key_down[GLFW_KEY_UP]) {
             flying_thing_increase_inclination(&flying_thing, 0.03);
@@ -106,7 +117,41 @@ int main() {
         glUniformMatrix4fv(terrain_shader.proj_mat_location, 1, GL_TRUE, proj_mat.m);
         glUniformMatrix4fv(terrain_shader.view_mat_location, 1, GL_TRUE, camera.view_mat.m);
 
+        glUseProgram(single_color_shader.program);
+        glUniformMatrix4fv(single_color_shader.proj_mat_location, 1, GL_TRUE, proj_mat.m);
+        glUniformMatrix4fv(single_color_shader.view_mat_location, 1, GL_TRUE, camera.view_mat.m);
+
+        glUseProgram(cursor_shader.program);
+        glUniformMatrix4fv(cursor_shader.proj_mat_location, 1, GL_TRUE, ui_proj_mat.m);
+
+        {
+            struct tree *closest_tree = NULL;
+            float closest_tree_dist = 1000.0;
+
+            for (i = 0; i < 100; i++) {
+                struct tree *tree = &trees[i];
+                if (!tree->is_visible) {
+                    continue;
+                }
+                tree->is_selected = false;
+
+                ray r = (ray) {flying_thing.pos, flying_thing.dir}; 
+                sphere s = (sphere) {tree->position, 10.0};
+                float tree_dist = ray_dist_to_sphere(&r, &s);
+
+                if (tree_dist < closest_tree_dist && tree_dist > 0) {
+                    closest_tree_dist = tree_dist;
+                    closest_tree = tree;
+                }
+            }
+
+            if (closest_tree) {
+                closest_tree->is_selected = true;
+            }
+        }
+
         terrain_draw();
+        cursor_draw(&state);
 
         glfwPollEvents();
         glfwSwapBuffers(window);
