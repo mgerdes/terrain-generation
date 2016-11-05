@@ -16,6 +16,7 @@
 #include "controls.h"
 #include "cursor.h"
 #include "state.h"
+#include "sky_background.h"
 
 int main() {
     struct state state;
@@ -26,6 +27,7 @@ int main() {
         tree_init_data();
         terrain_init_data();
         cursor_init_data();
+        sky_background_init_data();
     }
 
     struct camera camera;
@@ -150,8 +152,9 @@ int main() {
             }
         }
 
-        terrain_draw();
+        sky_background_draw();
         cursor_draw(&state);
+        terrain_draw();
 
         glfwPollEvents();
         glfwSwapBuffers(window);

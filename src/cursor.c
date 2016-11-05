@@ -12,7 +12,6 @@ static const char *cursor_vertex_shader_string =
 static const char *cursor_fragment_shader_string = 
     "#version 330\n"
     "out vec4 color;"
-
     "void main () {"
     "   color = vec4(0.0, 0.0, 0.0, 1.0);"
     "}";

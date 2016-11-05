@@ -3,6 +3,7 @@ import triangle
 import numpy
 import noise as pnoise
 import random
+import math
 from PIL import Image 
 
 def make_noise_for_biomes():
@@ -17,6 +18,8 @@ def make_noise_for_biomes():
                 n[i][j] = 0.1
             elif (n[i][j] < 0.6):
                 n[i][j] = 0.3
+            elif (n[i][j] < 0.65):
+                pass
             else:
                 n[i][j] = 1.0
     return n
@@ -74,6 +77,8 @@ def noise_combine_with_biome(noise, biome_noise):
                 new_noise[i][j] = normalize_number(noise[i][j], 0.05, 0.10)
             elif (biome_noise[i][j] == 0.3):
                 new_noise[i][j] = normalize_number(noise[i][j], 0.10, 0.30)
+            elif (biome_noise[i][j] != 1.0):
+                new_noise[i][j] = (biome_noise[i][j] - 0.60) / 0.05 * normalize_number(noise[i][j], 0.30, 1.00) + (0.65 - biome_noise[i][j]) / 0.05 * normalize_number(noise[i][j], 0.10, 0.30)
             else:
                 new_noise[i][j] = normalize_number(noise[i][j], 0.30, 1.00)
 
@@ -102,7 +107,7 @@ def noise_sample_points(n):
             if (random.random() < 0.05):
                 pts.append((i, j)) 
             else:
-                if (d > 0.005 and random.random() > 0.4):
+                if (d > 0.005 and random.random() > 0.8):
                     pts.append((i, j)) 
 
     return pts
@@ -127,12 +132,14 @@ def get_color_for_triangle(tri):
     slope = max(numpy.dot(normal, [0, 1, 0]), 0.0)
 
     if (slope < 0.5):
-        return (0.3, 0.3, 0.3)
+        return (0.2, 0.2, 0.2)
 
     if (elev < 0.05):
         return (0, 0.41, 0.58)
     elif (elev < 0.10):
-        return (0, 1, 0)
+        i = int((1/3) * (tri[0][0] + tri[1][0] + tri[2][0]))
+        j = int((1/3) * (tri[0][2] + tri[1][2] + tri[2][2]))
+        return voronoi_diagram[i][j]
     elif (elev < 0.30):
         return (0.2, 0.2, 0.2)
     else:
@@ -159,12 +166,44 @@ def create_mesh_from_points(pts, noise):
             f.write(str(pt[0]) + ' ' + str(pt[1]) + ' ' + str(pt[2]) + '\n')
             f.write(str(color[0]) + ' ' + str(color[1]) + ' ' + str(color[2]) + '\n')
 
+def create_voronoi_diagram(num_cells):
+    diagram = []
+
+    nx = []
+    ny = []
+    nr = []
+    ng = []
+    nb = []
+
+    for i in range(num_cells):
+        nx.append(random.randrange(600))
+        ny.append(random.randrange(600))
+        nr.append(0)
+        ng.append(256 * (random.random() * 0.6 + 0.4))
+        nb.append(0)
+
+    for y in range(600):
+        diagram.append([])
+        for x in range(600):
+            dmin = math.hypot(600 - 1, 600 - 1)
+            j = -1
+            for i in range(num_cells):
+                d = math.hypot(nx[i] - x, ny[i] - y)
+                if d < dmin:
+                    dmin = d
+                    j = i
+            diagram[y].append((nr[j] / 256, ng[j] / 256, nb[j] / 256))
+
+    return diagram
+
+voronoi_diagram = create_voronoi_diagram(25)
+
 noise = make_noise()
-#output_noise_image(noise, 'noise.png')
+output_noise_image(noise, 'noise.png')
 biome_noise = make_noise_for_biomes()
-#output_noise_image(biome_noise, 'biome_noise.png')
+output_noise_image(biome_noise, 'biome_noise.png')
 terrain_noise = noise_combine_with_biome(noise, biome_noise)
-#output_noise_image(terrain_noise, 'terrain_noise.png')
+output_noise_image(terrain_noise, 'terrain_noise.png')
 pts = noise_sample_points(terrain_noise)
-#output_sampled_points_image(pts, 'terrain_pts.png')
+output_sampled_points_image(pts, 'terrain_pts.png')
 create_mesh_from_points(pts, terrain_noise)

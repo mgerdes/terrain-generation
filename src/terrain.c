@@ -137,7 +137,7 @@ void terrain_update_geometry() {
             float z = 40 + j * (600 / 10.0) + rz;
             float y = height_field[(int) (600 * x) + (int) z];
 
-            if (y >= 2 && y <= 10) {
+            if (y >= 5 && y <= 10) {
                 trees[i * 10 + j].is_visible = true;
             }
             else {
@@ -205,4 +205,7 @@ void terrain_draw() {
             tree_draw(&trees[i * 10 + j]);
         }
     }
+
+    glStencilMask(0xFF);
+    glClear(GL_STENCIL_BUFFER_BIT); 
 }
