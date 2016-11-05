@@ -148,6 +148,7 @@ int main() {
             }
 
             if (closest_tree) {
+                state.selected_tree = closest_tree;
                 closest_tree->is_selected = true;
             }
         }
@@ -155,6 +156,27 @@ int main() {
         sky_background_draw();
         cursor_draw(&state);
         terrain_draw();
+
+        static vec3 flying_thing_velocity = {0, 0, 0};
+
+        vec3 force_on_flying_thing = {0, 0, 0};
+        if (state.selected_tree && controls.left_mouse_down) {
+            vec3 force = vec3_sub(&state.selected_tree->position, &flying_thing.pos);
+            force_on_flying_thing = vec3_add(&force_on_flying_thing, &force);
+        }
+        else {
+            flying_thing_velocity = (vec3) {0, 0, 0};
+        }
+
+        flying_thing_velocity = vec3_add_scaled(&flying_thing_velocity, &force_on_flying_thing, 0.016);
+        
+        float speed = vec3_length(&flying_thing_velocity);
+        if (speed > 100) {
+            flying_thing_velocity = vec3_normalize(&flying_thing_velocity);
+            flying_thing_velocity = vec3_scale(&flying_thing_velocity, 100);
+        }
+
+        flying_thing.pos = vec3_add_scaled(&flying_thing.pos, &flying_thing_velocity, 0.016);
 
         glfwPollEvents();
         glfwSwapBuffers(window);

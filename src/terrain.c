@@ -126,14 +126,14 @@ void terrain_update_geometry() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(2);
 
-    static float kinda_random[11] = { -0.9, 0.9, -0.4, 0.2, 0.6, -0.3, -0.8, -0.2, 0.5, 0.1, -0.6 };
+    static float kinda_random[17] = { -0.9, 0.9, -0.4, 0.2, 0.6, -0.3, -0.8, -0.2, 0.5, 0.1, -0.6, -0.2, 0.8, -0.7, 0.4, -0.8, -0.1 };
     k = 0;
     for (i = 0; i < 10; i++) {
         for (j = 0; j < 10; j++) {
-            float rx = 20 * kinda_random[k++ % 11];
-            float rz = 20 * kinda_random[k++ % 11];
+            float rx = 20 * kinda_random[k++ % 17] ;
+            float rz = 20 * kinda_random[k++ % 17];
 
-            float x = 40 + i * (600 / 10.0) + rx;
+            float x = 40 + i * (600 / 10.0) + rx; 
             float z = 40 + j * (600 / 10.0) + rz;
             float y = height_field[(int) (600 * x) + (int) z];
 
@@ -145,11 +145,8 @@ void terrain_update_geometry() {
             }
 
             trees[i * 10 + j].is_selected = false;
-            if (i == 0 && j == 0) {
-                trees[i * 10 + j].is_selected = true;
-            }
 
-            trees[i * 10 + j].position = (vec3) {x, y + 2.0, z};
+            trees[i * 10 + j].position = (vec3) {x, y + 5.2, z};
             trees[i * 10 + j].scale = (vec3) {2.0, 2.0, 2.0};
             trees[i * 10 + j].rotation = (vec3) {0.0, x * z, 0.0};
         }
@@ -158,7 +155,7 @@ void terrain_update_geometry() {
 
 void terrain_draw() {
     int i, j, k = 0;
-    mat4 scale_mat = mat4_scale(&(vec3) {1.0, 0.6, 1.0});
+    mat4 scale_mat = mat4_scale(&(vec3) {1.0, 1.0, 1.0});
     mat4 translation_mat = mat4_translation(&(vec3) {0.0, 0.0, 0.0});
     mat4 model_mat = mat4_multiply(&translation_mat, &scale_mat);
 
@@ -173,7 +170,7 @@ void terrain_draw() {
     glStencilMask(0xFF);
     glStencilFunc(GL_ALWAYS, 1, 0xFF);
 
-    glUniformMatrix4fv(model_shader.model_mat_location, 1, GL_TRUE, model_mat.m);
+    glUniformMatrix4fv(terrain_shader.model_mat_location, 1, GL_TRUE, model_mat.m);
     glBindVertexArray(terrain_geometry.vao);
     glDrawArrays(GL_TRIANGLES, 0, num_points);
 

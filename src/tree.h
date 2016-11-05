@@ -14,6 +14,5 @@ struct model tree_model;
 
 void tree_init_data(void);
 void tree_draw(struct tree *tree);
-void tree_draw_border(struct tree *tree);
 
 #endif 
