@@ -4,167 +4,218 @@ import numpy
 import noise as pnoise
 import random
 import math
-from PIL import Image 
+from PIL import Image, ImageDraw
 
-def make_noise_for_biomes():
-    num_biomes = 4 
-    n = make_noise(1)
+biomes = [ 
+        {'transition_range': (0.00, 0.00), 'in_range': (0.00, 0.10), 'out_range': (0.00, 0.05)}, # WATER
+        {'transition_range': (0.10, 0.10), 'in_range': (0.10, 0.48), 'out_range': (0.05, 0.10)}, # GRASS
+        {'transition_range': (0.48, 0.50), 'in_range': (0.50, 0.60), 'out_range': (0.10, 0.30)}, # ROCKS
+        {'transition_range': (0.60, 0.65), 'in_range': (0.65, 1.00), 'out_range': (0.30, 1.00)}  # MOUNTAIN
+        ]
+
+def make_noise(freq = 20, save_image = False, file_name = 'noise.png'):
+    noise = []
+    for i in range(600):
+        noise.append([])
+        for j in range(600):
+            noise[i].append(0)
+
+    i_off = 1000 * random.random()
+    j_off = 1000 * random.random()
+
+    noise_min = 100
+    noise_max = -100
 
     for i in range(600):
         for j in range(600):
-            if (n[i][j] < 0.1):
-                n[i][j] = 0.0
-            elif (n[i][j] < 0.5):
-                n[i][j] = 0.1
-            elif (n[i][j] < 0.6):
-                n[i][j] = 0.3
-            elif (n[i][j] < 0.65):
-                pass
+            val = pnoise.pnoise2(i_off + freq * i / 600, j_off + freq * j / 600, 3)
+            if (val < noise_min): 
+                noise_min = val
+            if (val > noise_max): 
+                noise_max = val
+            noise[i][j] = val
+
+    for i in range(600):
+        for j in range(600):
+            noise[i][j] = (noise[i][j] - noise_min) / (noise_max - noise_min)
+
+    if (save_image):
+        img = Image.new('RGB', (600, 600))
+        for i in range(600):
+            for j in range(600):
+                val = int(n[i][j] * 256);
+                img.putpixel((i, j), (val, val, val))
+        img.save(file_name)
+
+    return noise
+
+def make_biome_map(save_image = False, file_name = 'biome_map.png'):
+    noise = make_noise(1)
+    bezier_path = create_bezier_path(True)
+
+    biome_map = []
+    for i in range(600):
+        biome_map.append([])
+        for j in range(600):
+            biome_map[i].append(0)
+
+    for i in range(600):
+        for j in range(600):
+            if (bezier_path[i][j] != 0):
+                biome_map[i][j] = (255 - bezier_path[i][j]) / 256
             else:
-                n[i][j] = 1.0
-    return n
+                for k in range(len(biomes)):
+                    biome = biomes[k]
 
-def make_noise(f = 20):
-    n_min = 100
-    n_max = -100
-    n = []
+                    trans_low = biome['transition_range'][0]
+                    trans_high = biome['transition_range'][1]
 
-    x_off = 1000 * random.random()
-    y_off = 1000 * random.random()
+                    in_low = biome['in_range'][0]
+                    in_high = biome['in_range'][1]
 
-    for i in range(600):
-        n.append([]);
-        for j in range(600):
-            n_val = pnoise.pnoise2(x_off + f * i / 600, y_off + f * j / 600, 3)
-            if (n_val < n_min): 
-                n_min = n_val
-            if (n_val > n_max): 
-                n_max = n_val
-            n[i].append(n_val)
+                    if (k > 0 and noise[i][j] >= trans_low and noise[i][j] < trans_high):
+                        biome_map[i][j] = (k - 1) + (noise[i][j] - trans_low) / (trans_high - trans_low)
 
-    for i in range(600):
-        for j in range(600):
-            n[i][j] = (n[i][j] - n_min) / (n_max - n_min)
+                    if (noise[i][j] >= in_low and noise[i][j] < in_high):
+                        biome_map[i][j] = k
 
-    return n
+    if (save_image):
+        img = Image.new('RGB', (600, 600))
+        for i in range(600):
+            for j in range(600):
+                val = int((biome_map[i][j] / len(biomes)) * 256);
+                img.putpixel((i, j), (val, val, val))
+        img.save(file_name)
 
-def output_noise_image(n, filename):
-    img = Image.new('RGB', (600, 600))
-
-    for i in range(600):
-        for j in range(600):
-            a = int(n[i][j] * 256);
-            img.putpixel((i, j), (a, a, a))
-
-    img.save(filename)
+    return biome_map
 
 def normalize_number(n, low, high):
     return low + n * (high - low);
 
-def noise_combine_with_biome(noise, biome_noise):
-    new_noise = []
+def create_terrain_height_map(save_image = False, file_name = 'height_map.png'):
+    height_map = []
+    for i in range(600):
+        height_map.append([])
+        for j in range(600):
+            height_map[i].append(0)
+
+    biome_map = make_biome_map(True)
+    noise = make_noise(20)
 
     for i in range(600):
-        new_noise.append([])
         for j in range(600):
-            new_noise[i].append(0)
+            if (int(biome_map[i][j]) == biome_map[i][j]):
+                biome = biomes[int(biome_map[i][j])]
+                
+                low = biome['out_range'][0]
+                high = biome['out_range'][1]
 
-    for i in range(600):
-        for j in range(600):
-            if (biome_noise[i][j] == 0.0):
-                new_noise[i][j] = normalize_number(noise[i][j], 0.00, 0.05)
-            elif (biome_noise[i][j] == 0.1):
-                new_noise[i][j] = normalize_number(noise[i][j], 0.05, 0.10)
-            elif (biome_noise[i][j] == 0.3):
-                new_noise[i][j] = normalize_number(noise[i][j], 0.10, 0.30)
-            elif (biome_noise[i][j] != 1.0):
-                new_noise[i][j] = (biome_noise[i][j] - 0.60) / 0.05 * normalize_number(noise[i][j], 0.30, 1.00) + (0.65 - biome_noise[i][j]) / 0.05 * normalize_number(noise[i][j], 0.10, 0.30)
+                height_map[i][j] = normalize_number(noise[i][j], low, high)
             else:
-                new_noise[i][j] = normalize_number(noise[i][j], 0.30, 1.00)
+                biome0 = biomes[int(biome_map[i][j])]
+                biome1 = biomes[int(biome_map[i][j]) + 1]
 
-    return new_noise
+                low0 = biome0['out_range'][0]
+                high0 = biome0['out_range'][1]
+                height0 = normalize_number(noise[i][j], low0, high0)
+
+                low1 = biome1['out_range'][0]
+                high1 = biome1['out_range'][1]
+                height1 = normalize_number(noise[i][j], low1, high1)
+                
+                t0 = int(biome_map[i][j] + 1) - biome_map[i][j]
+                t1 = biome_map[i][j] - int(biome_map[i][j])
+
+                height_map[i][j] = t0 * height0 + t1 * height1
+
+    if (save_image):
+        img = Image.new('RGB', (600, 600))
+        for i in range(600):
+            for j in range(600):
+                val = int(height_map[i][j] * 256)
+                img.putpixel((i, j), (val, val, val))
+        img.save(file_name)
+
+    return height_map
 
 
-def noise_get_point(n, i, j):
-    if (i < 0 or j < 0 or i >= 600 or j >= 600):
-        return 0
+def create_terrain_mesh(save_image = True, file_name = 'terrain_mesh.png'):
+    height_map = create_terrain_height_map(save_image);
+    voronoi_diagram = create_voronoi_diagram(25)
 
-    return n[i][j]
+    def get_point_on_height_map(i, j):
+        if (i < 0 or j < 0 or i >= 600 or j >= 600):
+            return 0
+        return height_map[i][j]
 
-def noise_sample_points(n):
-    pts = []
+    def get_triangle_color(tri):
+        elev = 0.3 * (tri[0][1] + tri[1][1] + tri[2][1]) / 100
 
+        normal = numpy.cross(numpy.subtract(tri[0], tri[2]), numpy.subtract(tri[0], tri[1]))
+        normal = normal / numpy.linalg.norm(normal)
+        slope = max(numpy.dot(normal, [0, 1, 0]), 0.0)
+
+        if (slope < 0.5):
+            return (0.2, 0.2, 0.2)
+
+        if (elev < 0.05):
+            return (0, 0.41, 0.58)
+        elif (elev < 0.10):
+            i = int((1/3) * (tri[0][0] + tri[1][0] + tri[2][0]))
+            j = int((1/3) * (tri[0][2] + tri[1][2] + tri[2][2]))
+            return voronoi_diagram[i][j]
+        elif (elev < 0.30):
+            return (0.2, 0.2, 0.2)
+        else:
+            return (1.0, 1.0, 1.0)
+
+    terrain_pts = []
     for i in range(600):
         for j in range(600):
-            p0 = noise_get_point(n, i, j)
-            p1 = noise_get_point(n, i - 1, j)
-            p2 = noise_get_point(n, i + 1, j)
-            p3 = noise_get_point(n, i, j - 1)
-            p4 = noise_get_point(n, i, j + 1)
+            p0 = get_point_on_height_map(i, j)
+            p1 = get_point_on_height_map(i - 1, j)
+            p2 = get_point_on_height_map(i + 1, j)
+            p3 = get_point_on_height_map(i, j - 1)
+            p4 = get_point_on_height_map(i, j + 1)
 
-            d = 0.2 * (abs(p1 - p0) + abs(p2 - p0) + abs(p3 - p0) + abs(p4 - p0))
+            height_delta = 0.2 * (abs(p1 - p0) + abs(p2 - p0) + abs(p3 - p0) + abs(p4 - p0))
 
             if (random.random() < 0.05):
-                pts.append((i, j)) 
+                terrain_pts.append((i, j)) 
             else:
-                if (d > 0.005 and random.random() > 0.8):
-                    pts.append((i, j)) 
+                if (height_delta > 0.005 and random.random() > 0.8):
+                    terrain_pts.append((i, j)) 
 
-    return pts
-
-def output_sampled_points_image(pts, filename):
-    img = Image.new('RGB', (600, 600))
+    out_file = open('terrain_mesh.bin', 'w')
+    terrain_tris = triangle.delaunay(terrain_pts)
 
     for i in range(600):
         for j in range(600):
-            img.putpixel((i, j), (255, 255, 255))
+            elev = 100 * height_map[i][j]
+            out_file.write(str(elev) + '\n')
 
-    for pt in pts:
-        img.putpixel(pt, (0, 0, 0))
-
-    img.save(filename)
-
-def get_color_for_triangle(tri):
-    elev = 0.3 * (tri[0][1] + tri[1][1] + tri[2][1]) / 100
-
-    normal = numpy.cross(numpy.subtract(tri[0], tri[2]), numpy.subtract(tri[0], tri[1]))
-    normal = normal / numpy.linalg.norm(normal)
-    slope = max(numpy.dot(normal, [0, 1, 0]), 0.0)
-
-    if (slope < 0.5):
-        return (0.2, 0.2, 0.2)
-
-    if (elev < 0.05):
-        return (0, 0.41, 0.58)
-    elif (elev < 0.10):
-        i = int((1/3) * (tri[0][0] + tri[1][0] + tri[2][0]))
-        j = int((1/3) * (tri[0][2] + tri[1][2] + tri[2][2]))
-        return voronoi_diagram[i][j]
-    elif (elev < 0.30):
-        return (0.2, 0.2, 0.2)
-    else:
-        return (1.0, 1.0, 1.0)
-
-def create_mesh_from_points(pts, noise):
-    f = open('terrain_mesh.bin', 'w')
-    tris = triangle.delaunay(pts)
-
-    for i in range(600):
-        for j in range(600):
-            elev = 100 * noise[i][j]
-            f.write(str(elev) + '\n')
-
-    f.write(str(len(tris)) + '\n')
-    for tri in tris:
+    out_file.write(str(len(terrain_tris)) + '\n')
+    for tri in terrain_tris:
         t = []
         for i in range(3):
-            pt = pts[tri[i]]
-            elev = 100 * noise[pt[0]][pt[1]]
+            pt = terrain_pts[tri[i]]
+            elev = 100 * height_map[pt[0]][pt[1]]
             t.append([pt[0], elev, pt[1]])
-        color = get_color_for_triangle(t)
+        color = get_triangle_color(t)
         for pt in t:
-            f.write(str(pt[0]) + ' ' + str(pt[1]) + ' ' + str(pt[2]) + '\n')
-            f.write(str(color[0]) + ' ' + str(color[1]) + ' ' + str(color[2]) + '\n')
+            out_file.write(str(pt[0]) + ' ' + str(pt[1]) + ' ' + str(pt[2]) + '\n')
+            out_file.write(str(color[0]) + ' ' + str(color[1]) + ' ' + str(color[2]) + '\n')
+
+    if (save_image):
+        img = Image.new('RGB', (600, 600))
+        for i in range(600):
+            for j in range(600):
+                img.putpixel((i, j), (255, 255, 255))
+        for pt in terrain_pts:
+            img.putpixel(pt, (0, 0, 0))
+        img.save(file_name)
+
+    return terrain_pts
 
 def create_voronoi_diagram(num_cells):
     diagram = []
@@ -196,14 +247,71 @@ def create_voronoi_diagram(num_cells):
 
     return diagram
 
-voronoi_diagram = create_voronoi_diagram(25)
+def create_bezier_path(save_image = False):
+    points = []
+    for i in range(10):
+        x = 599 * (i / 9)
+        y = 50 + 500 * random.random()
+        points.append(numpy.array([x, y]))
 
-noise = make_noise()
-output_noise_image(noise, 'noise.png')
-biome_noise = make_noise_for_biomes()
-output_noise_image(biome_noise, 'biome_noise.png')
-terrain_noise = noise_combine_with_biome(noise, biome_noise)
-output_noise_image(terrain_noise, 'terrain_noise.png')
-pts = noise_sample_points(terrain_noise)
-output_sampled_points_image(pts, 'terrain_pts.png')
-create_mesh_from_points(pts, terrain_noise)
+    coeff = [1, 9, 36, 84, 126, 126, 84, 36, 9, 1]
+    path = []
+
+    num_samples = 10000
+    for i in range(num_samples + 1):
+        t = i / num_samples
+        p = numpy.array([0, 0])
+        for j in range(10):
+            p = p + pow(1 - t, j) * pow(t, 9 - j) * coeff[j] * points[j]
+        path.append(p)
+
+    num_rectangles = 1
+    rectangle_width = 20
+    rectangles = []
+    for i in range(num_rectangles):
+        rectangles.append([])
+
+    for j in range(num_rectangles):
+        for i in range(len(path) - 1):
+            d = path[i + 1] - path[i]
+            d[0], d[1] = -d[1], d[0]
+            d = d / numpy.linalg.norm(d)
+
+            x1 = int((path[i] + (rectangle_width + j) * d)[0])
+            y1 = int((path[i] + (rectangle_width + j) * d)[1])
+
+            x2 = int((path[i + 1] + (rectangle_width + j) * d)[0])
+            y2 = int((path[i + 1] + (rectangle_width + j) * d)[1])
+
+            x3 = int((path[i + 1] - (rectangle_width + j) * d)[0])
+            y3 = int((path[i + 1] - (rectangle_width + j) * d)[1])
+
+            x4 = int((path[i] - (rectangle_width + j) * d)[0])
+            y4 = int((path[i] - (rectangle_width + j) * d)[1])
+
+            val = 255 - int(255 * j / num_rectangles);
+
+            rectangles[j].append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
+
+    img = Image.new('RGB', (600, 600))
+    draw = ImageDraw.Draw(img)
+    for j in reversed(range(num_rectangles)):
+        for rect in rectangles[j]:
+            draw.polygon(rect[0], fill=rect[1])
+    del draw
+
+    if (save_image):
+        img.save('rectangles.png')
+
+    pixels = img.load()
+
+    bezier_path = []
+    for i in range(600):
+        bezier_path.append([])
+        for j in range(600):
+            bezier_path[i].append(pixels[i, j][0])
+
+    return bezier_path
+
+#create_bezier_path(True)
+create_terrain_mesh(True)
