@@ -155,19 +155,32 @@ def create_terrain_mesh(save_image = True, file_name = 'terrain_mesh.png'):
         normal = normal / numpy.linalg.norm(normal)
         slope = max(numpy.dot(normal, [0, 1, 0]), 0.0)
 
-        if (slope < 0.5):
-            return (0.2, 0.2, 0.2)
-
         if (elev < 0.05):
-            return (0, 0.41, 0.58)
+            if (slope < 0.9):
+                return (0.1, 0.1, 0.1)
+            else:
+                return (0, 0.41, 0.58)
         elif (elev < 0.10):
-            i = int((1/3) * (tri[0][0] + tri[1][0] + tri[2][0]))
-            j = int((1/3) * (tri[0][2] + tri[1][2] + tri[2][2]))
-            return voronoi_diagram[i][j]
+            if (slope < 0.9):
+                return (0.1, 0.1, 0.1)
+            else:
+                i = int((1 / 3) * (tri[0][0] + tri[1][0] + tri[2][0]))
+                j = int((1 / 3) * (tri[0][2] + tri[1][2] + tri[2][2]))
+                v = voronoi_diagram[i][j]
+                return (0.0, v, 0.0)
         elif (elev < 0.30):
-            return (0.2, 0.2, 0.2)
+            i = int((1 / 3) * (tri[0][0] + tri[1][0] + tri[2][0]))
+            j = int((1 / 3) * (tri[0][2] + tri[1][2] + tri[2][2]))
+            v = voronoi_diagram[i][j]
+            if (slope < 0.5):
+                return (0.1, 0.1, 0.1)
+            else:
+                return (0.5 * 87 / 256 * v, 0.5 * 59 / 256 * v, 0.5 * 12 / 256 * v)
         else:
-            return (1.0, 1.0, 1.0)
+            if (slope < 0.5):
+                return (0.1, 0.1, 0.1)
+            else:
+                return (1.0, 1.0, 1.0)
 
     terrain_pts = []
     for i in range(600):
@@ -222,16 +235,12 @@ def create_voronoi_diagram(num_cells):
 
     nx = []
     ny = []
-    nr = []
-    ng = []
-    nb = []
+    nv = []
 
     for i in range(num_cells):
         nx.append(random.randrange(600))
         ny.append(random.randrange(600))
-        nr.append(0)
-        ng.append(256 * (random.random() * 0.6 + 0.4))
-        nb.append(0)
+        nv.append(random.random() * 0.6 + 0.4)
 
     for y in range(600):
         diagram.append([])
@@ -243,7 +252,7 @@ def create_voronoi_diagram(num_cells):
                 if d < dmin:
                     dmin = d
                     j = i
-            diagram[y].append((nr[j] / 256, ng[j] / 256, nb[j] / 256))
+            diagram[y].append(nv[j])
 
     return diagram
 
@@ -292,6 +301,26 @@ def create_bezier_path(save_image = False):
             val = 255 - int(255 * j / num_rectangles);
 
             rectangles[j].append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
+
+    for i in range(len(path) - 2):
+        r1 = rectangles[0][i]
+        r2 = rectangles[0][i + 1]
+
+        val = 255
+
+        x1 = r1[0][2]  
+        y1 = r1[0][3]  
+
+        x2 = r1[0][4]  
+        y2 = r1[0][5]  
+
+        x3 = r2[0][6]  
+        y3 = r2[0][7]  
+
+        x4 = r2[0][0]  
+        y4 = r2[0][1]  
+
+        rectangles[0].append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
 
     img = Image.new('RGB', (600, 600))
     draw = ImageDraw.Draw(img)

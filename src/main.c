@@ -36,7 +36,7 @@ int main() {
     camera.up = (vec3) {0.0, 1.0, 0.0};
     camera_update_view_mat(&camera);
 
-    mat4 proj_mat = mat4_perspective_projection(60, 1.0, 1.0, 1000);
+    mat4 proj_mat = mat4_perspective_projection(67, 1.0, 1.0, 1000);
     mat4 ui_proj_mat = mat4_orthographic_projection(0.0, 1000.0, 1000.0, 0.0, 0.0, 1.0);
 
     struct flying_thing flying_thing;
