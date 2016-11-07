@@ -8,19 +8,23 @@ static const char *terrain_vertex_shader_string =
     "in vec3 vertex_color;"
     "out vec3 frag_normal;"
     "out vec3 frag_color;"
+    "out float fog_factor;"
     "uniform mat4 model_mat;"
     "uniform mat4 view_mat;"
     "uniform mat4 proj_mat;"
     "void main () {"
     "   frag_normal = normalize((transpose(inverse(model_mat)) * vec4(vertex_normal, 1.0)).xyz);"
+    "   vec3 position = (view_mat * model_mat * vec4(vertex_position, 1.0)).xyz;"
+    "   fog_factor = pow(1.0 - max((1000.0 - length(position)) / 1000.0, 0.0), 2.0);"
     "   frag_color = vertex_color;"
-    "   gl_Position = proj_mat * view_mat * model_mat * vec4(vertex_position, 1.0);"
+    "   gl_Position = proj_mat * vec4(position, 1.0);"
     "}";
 
 static const char *terrain_fragment_shader_string = 
     "#version 330\n"
     "in vec3 frag_normal;"
     "in vec3 frag_color;"
+    "in float fog_factor;"
     "out vec4 color;"
 
     "void main () {"
@@ -32,7 +36,8 @@ static const char *terrain_fragment_shader_string =
     "   kd += 0.5 * max(dot(light_direction2, frag_normal), 0.3);"
     "   kd += 0.5 * max(dot(light_direction3, frag_normal), 0.3);"
     "   kd += 0.5 * max(dot(light_direction4, frag_normal), 0.3);"
-    "   color = vec4(kd * pow(frag_color, vec3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2)), 1.0);"
+    "   vec3 cd = vec3(kd * frag_color);"
+    "   color = vec4(pow(mix(cd, vec3(42 / 255.0, 78 / 255.0, 110 / 255.0), fog_factor), vec3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2)) , 1.0);"
     "}";
 
 static float *height_field;
@@ -62,7 +67,7 @@ void terrain_init_data() {
 }
 
 void terrain_update_geometry() {
-    int i, j, k, num_triangles;
+    int i, j, k, num_triangles, width;
     FILE *terrain_mesh_file = fopen("terrain_mesh.bin", "r");
 
     if (!terrain_mesh_file) {
@@ -70,10 +75,12 @@ void terrain_update_geometry() {
         exit(1);
     }
 
-    height_field = malloc(sizeof(float) * 600 * 600);
-    for (i = 0; i < 600; i++) {
-        for (j = 0; j < 600; j++) {
-            fscanf(terrain_mesh_file, "%f", &height_field[600 * i + j]);
+    fscanf(terrain_mesh_file, "%d", &width);
+
+    height_field = malloc(sizeof(float) * width * width);
+    for (i = 0; i < width; i++) {
+        for (j = 0; j < width; j++) {
+            fscanf(terrain_mesh_file, "%f", &height_field[width * i + j]);
         }
     }
 
@@ -126,6 +133,7 @@ void terrain_update_geometry() {
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
     glEnableVertexAttribArray(2);
 
+    /*
     static float kinda_random[17] = { -0.9, 0.9, -0.4, 0.2, 0.6, -0.3, -0.8, -0.2, 0.5, 0.1, -0.6, -0.2, 0.8, -0.7, 0.4, -0.8, -0.1 };
     k = 0;
     for (i = 0; i < 10; i++) {
@@ -151,6 +159,7 @@ void terrain_update_geometry() {
             trees[i * 10 + j].rotation = (vec3) {0.0, x * z, 0.0};
         }
     }
+    */
 }
 
 void terrain_draw() {
@@ -199,7 +208,7 @@ void terrain_draw() {
     glUseProgram(model_shader.program);
     for (i = 0; i < 10; i++) {
         for (j = 0; j < 10; j++) {
-            tree_draw(&trees[i * 10 + j]);
+            //tree_draw(&trees[i * 10 + j]);
         }
     }
 

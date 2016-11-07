@@ -15,7 +15,7 @@ static const char *sky_background_fragment_shader_string =
     "in vec3 frag_color;"
     "out vec4 color;"
     "void main () {"
-    "   color = vec4(frag_color, 1.0);"
+    "   color = vec4(pow(frag_color, vec3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2)), 1.0);"
     "}";
 
 void sky_background_init_data() {
@@ -35,11 +35,11 @@ void sky_background_init_data() {
     };
 
     float colors[18] = {
-        top_color.x, top_color.y, top_color.z,
-        top_color.x, top_color.y, top_color.z,
+        bot_color.x, bot_color.y, bot_color.z,
+        bot_color.x, bot_color.y, bot_color.z,
         bot_color.x, bot_color.y, bot_color.z,
 
-        top_color.x, top_color.y, top_color.z,
+        bot_color.x, bot_color.y, bot_color.z,
         bot_color.x, bot_color.y, bot_color.z,
         bot_color.x, bot_color.y, bot_color.z,
     };
