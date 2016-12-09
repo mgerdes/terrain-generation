@@ -6,7 +6,7 @@ import random
 import math
 from PIL import Image, ImageDraw
 
-width = 2000
+width = 500
 
 biomes = [ 
         {'transition_range': (0.00, 0.00), 'in_range': (0.00, 0.20), 'out_range': (0.00, 0.05)}, # WATER
