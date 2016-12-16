@@ -53,7 +53,7 @@ def make_noise(freq, save_image = False, file_name = 'noise.png'):
 
 def make_biome_map(save_image = False, file_name = 'biome_map.png'):
     noise = make_noise(width / 500)
-    bezier_path = create_bezier_path(True)
+    bezier_path = create_bezier_path(save_image)
 
     biome_map = []
     for i in range(width):
@@ -101,7 +101,7 @@ def create_terrain_height_map(save_image = False, file_name = 'height_map.png'):
         for j in range(width):
             height_map[i].append(0)
 
-    biome_map = make_biome_map(True)
+    biome_map = make_biome_map(save_image)
     noise = make_noise(width / 500 * 12)
 
     for i in range(width):
@@ -141,7 +141,7 @@ def create_terrain_height_map(save_image = False, file_name = 'height_map.png'):
     return height_map
 
 
-def create_terrain_mesh(save_image = True, file_name = 'terrain_mesh.png'):
+def create_terrain_mesh(save_image = False, file_name = 'terrain_mesh.png'):
     height_map = create_terrain_height_map(save_image);
     voronoi_diagram = create_voronoi_diagram(25)
 
@@ -278,37 +278,33 @@ def create_bezier_path(save_image = False):
             p = p + pow(1 - t, j) * pow(t, 9 - j) * coeff[j] * points[j]
         path.append(p)
 
-    num_rectangles = 1
     rectangle_width = 20
     rectangles = []
-    for i in range(num_rectangles):
-        rectangles.append([])
 
-    for j in range(num_rectangles):
-        for i in range(len(path) - 1):
-            d = path[i + 1] - path[i]
-            d[0], d[1] = -d[1], d[0]
-            d = d / numpy.linalg.norm(d)
+    for i in range(len(path) - 1):
+        d = path[i + 1] - path[i]
+        d[0], d[1] = -d[1], d[0]
+        d = d / numpy.linalg.norm(d)
 
-            x1 = int((path[i] + (rectangle_width + j) * d)[0])
-            y1 = int((path[i] + (rectangle_width + j) * d)[1])
+        x1 = int((path[i] + (rectangle_width + j) * d)[0])
+        y1 = int((path[i] + (rectangle_width + j) * d)[1])
 
-            x2 = int((path[i + 1] + (rectangle_width + j) * d)[0])
-            y2 = int((path[i + 1] + (rectangle_width + j) * d)[1])
+        x2 = int((path[i + 1] + (rectangle_width + j) * d)[0])
+        y2 = int((path[i + 1] + (rectangle_width + j) * d)[1])
 
-            x3 = int((path[i + 1] - (rectangle_width + j) * d)[0])
-            y3 = int((path[i + 1] - (rectangle_width + j) * d)[1])
+        x3 = int((path[i + 1] - (rectangle_width + j) * d)[0])
+        y3 = int((path[i + 1] - (rectangle_width + j) * d)[1])
 
-            x4 = int((path[i] - (rectangle_width + j) * d)[0])
-            y4 = int((path[i] - (rectangle_width + j) * d)[1])
+        x4 = int((path[i] - (rectangle_width + j) * d)[0])
+        y4 = int((path[i] - (rectangle_width + j) * d)[1])
 
-            val = 255 - int(255 * j / num_rectangles);
+        val = 255 
 
-            rectangles[j].append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
+        rectangles.append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
 
     for i in range(len(path) - 2):
-        r1 = rectangles[0][i]
-        r2 = rectangles[0][i + 1]
+        r1 = rectangles[i]
+        r2 = rectangles[i + 1]
 
         val = 255
 
@@ -324,13 +320,12 @@ def create_bezier_path(save_image = False):
         x4 = r2[0][0]  
         y4 = r2[0][1]  
 
-        rectangles[0].append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
+        rectangles.append(([x1, y1, x2, y2, x3, y3, x4, y4, x1, y1], (val, val, val)))
 
     img = Image.new('RGB', (width, width))
     draw = ImageDraw.Draw(img)
-    for j in reversed(range(num_rectangles)):
-        for rect in rectangles[j]:
-            draw.polygon(rect[0], fill=rect[1])
+    for rect in rectangles:
+        draw.polygon(rect[0], fill=rect[1])
     del draw
 
     if (save_image):
@@ -346,5 +341,4 @@ def create_bezier_path(save_image = False):
 
     return bezier_path
 
-#create_bezier_path(True)
-create_terrain_mesh(True)
+create_terrain_mesh()
